@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../api/supabase'
 import toast from 'react-hot-toast'
+import { UserPlus, Shield, User, Calendar } from 'lucide-react'
 
 interface Profile {
   id: string
@@ -112,62 +113,53 @@ export default function UsersPage() {
         <h1 className="text-3xl font-bold text-white">👥 Gestión de Usuarios</h1>
         <button
           onClick={() => setShowModal(true)}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors"
         >
-          + Nuevo Usuario
+          <UserPlus className="w-5 h-5" />
+          Nuevo Usuario
         </button>
       </div>
 
-      <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-700">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Nombre
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Rol
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Creado
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-700">
-            {profiles.map((profile) => (
-              <tr key={profile.id} className="hover:bg-slate-700/50">
-                <td className="px-6 py-4 whitespace-nowrap text-white">
-                  {profile.email}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-slate-300">
-                  {profile.full_name || '-'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <select
-                    value={profile.role}
-                    onChange={(e) => updateUserRole(profile.id, e.target.value as 'admin' | 'vendedor')}
-                    className="px-3 py-1 bg-slate-600 text-white rounded-lg text-sm border border-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="vendedor">Vendedor</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-slate-400 text-sm">
-                  {new Date(profile.created_at).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-slate-400 text-sm">-</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {profiles.map((profile) => (
+          <div
+            key={profile.id}
+            className={`bg-slate-800 rounded-xl p-5 border border-slate-700 hover:border-slate-600 transition-colors border-l-4 ${
+              profile.role === 'admin' ? 'border-l-emerald-500' : 'border-l-blue-500'
+            }`}
+          >
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 bg-emerald-600/20 rounded-xl flex items-center justify-center">
+                <User className="w-6 h-6 text-emerald-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold text-white truncate">
+                  {profile.full_name || 'Sin nombre'}
+                </h3>
+                <p className="text-slate-400 text-sm truncate">{profile.email}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-slate-400" />
+                <select
+                  value={profile.role}
+                  onChange={(e) => updateUserRole(profile.id, e.target.value as 'admin' | 'vendedor')}
+                  className="flex-1 px-3 py-2 bg-slate-700 text-white rounded-lg text-sm border border-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="vendedor">Vendedor</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <Calendar className="w-4 h-4" />
+                <span>{new Date(profile.created_at).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {showModal && (

@@ -1,24 +1,49 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../api/supabase'
-import { ShoppingCart, Package, Users, TrendingUp, AlertCircle } from 'lucide-react'
+import { ShoppingCart, Package, Users, TrendingUp, Clock, BarChart3 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import { formatCurrency } from '../utils/currency'
 
 interface Stats {
-  totalOrders: number
-  totalSales: number
+  todaySales: number
   pendingOrders: number
-  lowStockProducts: number
+  armedOrders: number
   totalProducts: number
+}
+
+interface TopProduct {
+  name: string
+  total_quantity: number
+}
+
+interface RecentOrder {
+  order_number: number
+  total: number
+  status: string
+  created_at: string
+  profiles: {
+    full_name: string | null
+    email: string
+  }[]
+}
+
+interface VendorStats {
+  full_name: string
+  email: string
+  total_sales: number
+  order_count: number
 }
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({
-    totalOrders: 0,
-    totalSales: 0,
+    todaySales: 0,
     pendingOrders: 0,
-    lowStockProducts: 0,
+    armedOrders: 0,
     totalProducts: 0,
   })
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([])
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([])
+  const [vendorStats, setVendorStats] = useState<VendorStats[]>([])
   const [loading, setLoading] = useState(true)
   const { profile, isAdmin } = useAuthStore()
 
@@ -26,8 +51,11 @@ export default function DashboardPage() {
     fetchStats()
   }, [])
 
+
   const fetchStats = async () => {
     try {
+      const today = new Date().toISOString().split('T')[0]
+
       // Fetch orders stats
       let ordersQuery = supabase.from('orders').select('*')
 
@@ -42,14 +70,17 @@ export default function DashboardPage() {
       const { data: orders, error: ordersError } = await ordersQuery
 
       if (!ordersError && orders) {
-        const totalSales = orders.reduce((sum, order) => sum + Number(order.total), 0)
+        const todaySales = orders
+          .filter((order) => order.status === 'entregado' && order.created_at.startsWith(today))
+          .reduce((sum, order) => sum + Number(order.total), 0)
         const pendingOrders = orders.filter((order) => order.status === 'pendiente').length
+        const armedOrders = orders.filter((order) => order.status === 'armado').length
 
         setStats((prev) => ({
           ...prev,
-          totalOrders: orders.length,
-          totalSales,
+          todaySales,
           pendingOrders,
+          armedOrders,
         }))
       }
 
@@ -60,21 +91,65 @@ export default function DashboardPage() {
           .select('*')
 
         if (!productsError && products) {
-          const lowStock = products.filter((p) => p.stock <= p.min_stock).length
           setStats((prev) => ({
             ...prev,
-            totalProducts: products.length,
-            lowStockProducts: lowStock,
+            totalProducts: products.filter(p => p.is_active).length,
           }))
         }
 
-        // Fetch users count
-        const { count: usersCount } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true })
+        // Fetch top products
+        const { data: topProductsData } = await supabase
+          .from('order_items')
+          .select('quantity, products(name)')
+          .order('quantity', { ascending: false })
+          .limit(5)
 
-        if (usersCount !== null) {
-          setStats((prev) => ({ ...prev, totalOrders: prev.totalOrders })) // Reuse for now
+        if (topProductsData) {
+          const productMap = new Map<string, number>()
+          topProductsData.forEach((item: any) => {
+            const name = item.products?.name || 'Desconocido'
+            productMap.set(name, (productMap.get(name) || 0) + item.quantity)
+          })
+          setTopProducts(
+            Array.from(productMap.entries())
+              .map(([name, total_quantity]) => ({ name, total_quantity }))
+              .sort((a, b) => b.total_quantity - a.total_quantity)
+              .slice(0, 5)
+          )
+        }
+
+        // Fetch recent orders
+        const { data: recentOrdersData } = await supabase
+          .from('orders')
+          .select('order_number, total, status, created_at, profiles(full_name, email)')
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        if (recentOrdersData) {
+          setRecentOrders(recentOrdersData as RecentOrder[])
+        }
+
+        // Fetch vendor stats
+        const { data: vendorData } = await supabase
+          .from('orders')
+          .select('vendedor_id, total, profiles(full_name, email)')
+          .order('created_at', { ascending: false })
+
+        if (vendorData) {
+          const vendorMap = new Map<string, VendorStats>()
+          vendorData.forEach((item: any) => {
+            const id = item.vendedor_id
+            const existing = vendorMap.get(id) || {
+              full_name: item.profiles?.full_name || '',
+              email: item.profiles?.email || '',
+              total_sales: 0,
+              order_count: 0,
+            }
+            existing.total_sales += Number(item.total)
+            existing.order_count += 1
+            vendorMap.set(id, existing)
+          })
+          setVendorStats(Array.from(vendorMap.values()).sort((a, b) => b.total_sales - a.total_sales))
         }
       }
     } catch (error) {
@@ -132,48 +207,34 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
-          title="Pedidos Totales"
-          value={stats.totalOrders}
-          icon={ShoppingCart}
-          gradient="bg-gradient-to-br from-blue-500 to-blue-600"
-        />
-        <StatCard
-          title="Ventas Totales"
-          value={`$${stats.totalSales.toLocaleString()}`}
+          title="Ventas del Día"
+          value={formatCurrency(stats.todaySales)}
           icon={TrendingUp}
           gradient="bg-gradient-to-br from-emerald-500 to-emerald-600"
         />
         <StatCard
           title="Pedidos Pendientes"
           value={stats.pendingOrders}
-          icon={AlertCircle}
+          icon={Clock}
           gradient="bg-gradient-to-br from-yellow-500 to-yellow-600"
+        />
+        <StatCard
+          title="Pedidos Armados"
+          value={stats.armedOrders}
+          icon={Package}
+          gradient="bg-gradient-to-br from-blue-500 to-blue-600"
         />
         {isAdmin() && (
           <StatCard
-            title="Productos con Stock Bajo"
-            value={stats.lowStockProducts}
-            icon={Package}
-            gradient="bg-gradient-to-br from-red-500 to-red-600"
+            title="Productos Activos"
+            value={stats.totalProducts}
+            icon={BarChart3}
+            gradient="bg-gradient-to-br from-purple-500 to-purple-600"
           />
         )}
       </div>
 
-      {isAdmin() && stats.lowStockProducts > 0 && (
-        <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-6 h-6 text-red-400" />
-            <div>
-              <h3 className="text-white font-semibold">Alerta de Stock</h3>
-              <p className="text-red-300 text-sm">
-                {stats.lowStockProducts} productos con stock bajo o agotado
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
           <h2 className="text-xl font-semibold text-white mb-4">🍬 Accesos Rápidos</h2>
           <div className="space-y-3">
@@ -203,23 +264,61 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-          <h2 className="text-xl font-semibold text-white mb-4">📊 Información</h2>
-          <div className="space-y-3 text-slate-300">
-            <p>
-              <strong className="text-white">Rol:</strong>{' '}
-              {profile?.role === 'admin' ? 'Administrador' : 'Vendedor'}
-            </p>
-            <p>
-              <strong className="text-white">Email:</strong> {profile?.email}
-            </p>
-            <p>
-              <strong className="text-white">Productos Activos:</strong>{' '}
-              {stats.totalProducts}
-            </p>
+        {isAdmin() && topProducts.length > 0 && (
+          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+            <h2 className="text-xl font-semibold text-white mb-4">🏆 Productos Más Vendidos</h2>
+            <div className="space-y-3">
+              {topProducts.map((product, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
+                  <span className="text-white">{product.name}</span>
+                  <span className="text-emerald-400 font-semibold">{product.total_quantity} vendidos</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {isAdmin() && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {recentOrders.length > 0 && (
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+              <h2 className="text-xl font-semibold text-white mb-4">📋 Pedidos Recientes</h2>
+              <div className="space-y-3">
+                {recentOrders.map((order) => (
+                  <div key={order.order_number} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
+                    <div>
+                      <span className="text-white font-semibold">#{String(order.order_number).padStart(6, '0')}</span>
+                      <p className="text-slate-400 text-xs">{order.profiles[0]?.full_name || order.profiles[0]?.email}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-emerald-400 font-semibold">{formatCurrency(order.total)}</span>
+                      <p className="text-slate-400 text-xs capitalize">{order.status}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {vendorStats.length > 0 && (
+            <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+              <h2 className="text-xl font-semibold text-white mb-4">👥 Actividad de Vendedores</h2>
+              <div className="space-y-3">
+                {vendorStats.map((vendor, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
+                    <div>
+                      <span className="text-white font-semibold">{vendor.full_name || vendor.email}</span>
+                      <p className="text-slate-400 text-xs">{vendor.order_count} pedidos</p>
+                    </div>
+                    <span className="text-emerald-400 font-semibold">{formatCurrency(vendor.total_sales)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

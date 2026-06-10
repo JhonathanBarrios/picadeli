@@ -20,7 +20,7 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, name: string) => Promise<void>
   signOut: () => Promise<void>
-  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>
+  updatePassword: (newPassword: string) => Promise<void>
   initialize: () => Promise<void>
   clearError: () => void
   isAdmin: () => boolean
