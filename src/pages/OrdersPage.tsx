@@ -159,7 +159,7 @@ function OrderCard({ order }: OrderCardProps) {
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
-  const { isAdmin, isVendedor } = useAuthStore()
+  const { isVendedor } = useAuthStore()
 
   useEffect(() => {
     fetchOrders()
