@@ -1,37 +1,37 @@
-import { motion } from 'motion/react';
-import { CreditCard, LayoutDashboard, Wallet, Repeat, PieChart, Settings, LogOut, X, PiggyBank, LayoutTemplate } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
+import { motion } from 'motion/react'
+import { LayoutDashboard, ShoppingCart, Users, Settings, LogOut, X, Candy } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../store/authStore'
 
 interface SidebarProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  isOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  isOpen?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function Sidebar({ activeTab, setActiveTab, isOpen, onOpenChange }: SidebarProps) {
-  const { user, signOut } = useAuthStore();
+export function Sidebar({ isOpen, onOpenChange }: SidebarProps) {
+  const { signOut, profile, isAdmin } = useAuthStore()
+  const location = useLocation()
+  const navigate = useNavigate()
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'transactions', label: 'Transacciones', icon: Wallet },
-    { id: 'recurring-payments', label: 'Pagos Recurrentes', icon: Repeat },
-    { id: 'templates', label: 'Plantillas', icon: LayoutTemplate },
-    { id: 'savings', label: 'Ahorro', icon: PiggyBank },
-    { id: 'cards', label: 'Tarjetas', icon: CreditCard },
-    { id: 'analytics', label: 'Análisis', icon: PieChart },
-    { id: 'settings', label: 'Configuración', icon: Settings },
-  ];
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { id: 'products', label: 'Menú Gomitas', icon: Candy, path: '/products' },
+    { id: 'orders', label: 'Pedidos', icon: ShoppingCart, path: '/orders' },
+    ...(isAdmin() ? [{ id: 'users', label: 'Usuarios', icon: Users, path: '/users' }] : []),
+    ...(isAdmin() ? [{ id: 'settings', label: 'Configuración', icon: Settings, path: '/settings' }] : []),
+  ]
 
   const handleLogout = async () => {
-    await signOut();
-    window.location.href = '/login';
-  };
+    await signOut()
+    window.location.href = '/login'
+  }
 
   const getUserInitials = () => {
-    if (!user?.user_metadata?.name) return 'U';
-    return user.user_metadata.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-  };
+    if (!profile?.full_name) return profile?.email?.[0]?.toUpperCase() || 'U'
+    return profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+  }
+
+  const isActive = (path: string) => location.pathname === path
 
   return (
     <>
@@ -48,12 +48,12 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onOpenChange }: Sideb
         {/* Logo */}
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <Wallet className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+              <Candy className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-white font-semibold text-lg">Nexo</h1>
-              <p className="text-slate-400 text-xs">Gestor Personal</p>
+              <h1 className="text-white font-semibold text-lg">Picadeli</h1>
+              <p className="text-slate-400 text-xs">Gestión de Gomitas</p>
             </div>
           </div>
         </div>
@@ -61,23 +61,22 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onOpenChange }: Sideb
         {/* Menu Items */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const Icon = item.icon
             return (
               <motion.button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => navigate(item.path)}
                 whileHover={{ x: 4 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                  isActive
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/30'
+                  isActive(item.path)
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
               >
                 <Icon className="w-5 h-5" />
                 <span className="font-medium">{item.label}</span>
               </motion.button>
-            );
+            )
           })}
         </nav>
 
@@ -89,8 +88,8 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onOpenChange }: Sideb
                 <span className="text-white font-semibold">{getUserInitials()}</span>
               </div>
               <div>
-                <p className="text-white text-sm font-medium">{user?.user_metadata?.name || 'Usuario'}</p>
-                <p className="text-slate-400 text-xs">{user?.email || ''}</p>
+                <p className="text-white text-sm font-medium">{profile?.full_name || 'Usuario'}</p>
+                <p className="text-slate-400 text-xs">{profile?.email || ''}</p>
               </div>
             </div>
             <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors">
@@ -117,12 +116,12 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onOpenChange }: Sideb
         {/* Logo */}
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <Wallet className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+              <Candy className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-white font-semibold text-lg">Nexo</h1>
-              <p className="text-slate-400 text-xs">Gestor Personal</p>
+              <h1 className="text-white font-semibold text-lg">Picadeli</h1>
+              <p className="text-slate-400 text-xs">Gestión de Gomitas</p>
             </div>
           </div>
         </div>
@@ -130,26 +129,25 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onOpenChange }: Sideb
         {/* Menu Items */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const Icon = item.icon
             return (
               <motion.button
                 key={item.id}
                 onClick={() => {
-                  setActiveTab(item.id);
-                  onOpenChange?.(false);
+                  navigate(item.path)
+                  onOpenChange?.(false)
                 }}
                 whileHover={{ x: 4 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                  isActive
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/30'
+                  isActive(item.path)
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
               >
                 <Icon className="w-5 h-5" />
                 <span className="font-medium">{item.label}</span>
               </motion.button>
-            );
+            )
           })}
         </nav>
 
@@ -161,8 +159,8 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onOpenChange }: Sideb
                 <span className="text-white font-semibold">{getUserInitials()}</span>
               </div>
               <div>
-                <p className="text-white text-sm font-medium">{user?.user_metadata?.name || 'Usuario'}</p>
-                <p className="text-slate-400 text-xs">{user?.email || ''}</p>
+                <p className="text-white text-sm font-medium">{profile?.full_name || 'Usuario'}</p>
+                <p className="text-slate-400 text-xs">{profile?.email || ''}</p>
               </div>
             </div>
             <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors">
@@ -172,5 +170,5 @@ export function Sidebar({ activeTab, setActiveTab, isOpen, onOpenChange }: Sideb
         </div>
       </motion.div>
     </>
-  );
+  )
 }

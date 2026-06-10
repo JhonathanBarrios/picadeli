@@ -2,18 +2,14 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from './store/authStore'
-import { useRealtimeNotifications } from './hooks/useRealtimeNotifications'
 import { usePWAUpdate } from './hooks/usePWAUpdate'
 import LoginPage from './pages/LoginPage'
 import DashboardLayout from './layouts/DashboardLayout'
 import DashboardPage from './pages/DashboardPage'
-import TransactionsPage from './pages/TransactionsPage'
-import AnalyticsPage from './pages/AnalyticsPage'
+import ProductsPage from './pages/ProductsPage'
+import OrdersPage from './pages/OrdersPage'
+import UsersPage from './pages/UsersPage'
 import SettingsPage from './pages/SettingsPage'
-import RecurringPaymentsPage from './pages/RecurringPaymentsPage'
-import CardsPage from './pages/CardsPage'
-import SavingsPage from './pages/SavingsPage'
-import TemplatesPage from './pages/TemplatesPage'
 import PWAUpdateBanner from './components/PWAUpdateBanner'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -34,9 +30,26 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAdmin, loading } = useAuthStore()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <div className="animate-spin text-4xl">⏳</div>
+      </div>
+    )
+  }
+
+  if (!isAdmin()) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return <>{children}</>
+}
+
 export default function App() {
   const { initialize } = useAuthStore()
-  useRealtimeNotifications() // Listen for realtime notifications
   const { updateAvailable, updateApp } = usePWAUpdate()
   const [showBanner, setShowBanner] = useState(false)
 
@@ -56,16 +69,13 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/transactions" element={<TransactionsPage />} />
-          <Route path="/recurring-payments" element={<RecurringPaymentsPage />} />
-          <Route path="/savings" element={<SavingsPage />} />
-          <Route path="/templates" element={<TemplatesPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/cards" element={<CardsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="/orders" element={<OrdersPage />} />
+          <Route element={<AdminRoute><UsersPage /></AdminRoute>} />
+          <Route element={<AdminRoute><SettingsPage /></AdminRoute>} />
         </Route>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
       <Toaster position="top-right" toastOptions={{
         style: {
