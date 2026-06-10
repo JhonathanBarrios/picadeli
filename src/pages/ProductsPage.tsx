@@ -88,16 +88,17 @@ export default function ProductsPage() {
 
   const updateQuantity = (productId: string, delta: number) => {
     setCart((prevCart) => {
-      const newCart = prevCart
-        .map((item) => {
-          if (item.product.id === productId) {
-            const newQuantity = item.quantity + delta
-            if (newQuantity <= 0) return null
-            return { ...item, quantity: newQuantity }
+      const newCart = prevCart.reduce<CartItem[]>((acc, item) => {
+        if (item.product.id === productId) {
+          const newQuantity = item.quantity + delta
+          if (newQuantity > 0) {
+            acc.push({ ...item, quantity: newQuantity })
           }
-          return item
-        })
-        .filter((item): item is CartItem => item !== null)
+        } else {
+          acc.push(item)
+        }
+        return acc
+      }, [])
 
       if (newCart.length === 0) {
         setCartOpen(false)
