@@ -99,7 +99,7 @@ export default function ProductsPage() {
         return item
       })
 
-      newCart = newCart.filter((item) => item !== null) as CartItem[]
+      newCart = newCart.filter((item): item is CartItem => item !== null)
 
       if (newCart.length === 0) {
         setCartOpen(false)
