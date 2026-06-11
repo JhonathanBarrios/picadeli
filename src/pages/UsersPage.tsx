@@ -50,25 +50,20 @@ export default function UsersPage() {
     }
 
     try {
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUserEmail,
-        password: newUserPassword,
-        options: {
-          data: { full_name: newUserName },
+      // Call Edge Function to create user without affecting current session
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: newUserEmail,
+          password: newUserPassword,
+          full_name: newUserName,
+          role: newUserRole,
         },
       })
 
-      if (authError) throw authError
-
-      if (authData.user) {
-        // Update profile role
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ role: newUserRole, full_name: newUserName })
-          .eq('id', authData.user.id)
-
-        if (profileError) throw profileError
+      if (error) {
+        // Try to get the specific error message from the Edge Function
+        const errorMessage = error.context?.message || error.message || 'Error desconocido'
+        throw new Error(errorMessage)
       }
 
       toast.success('Usuario creado exitosamente')
@@ -78,7 +73,7 @@ export default function UsersPage() {
       setNewUserPassword('')
       fetchProfiles()
     } catch (error: any) {
-      toast.error('Error al crear usuario')
+      toast.error('Error al crear usuario: ' + error.message)
       console.error(error)
     }
   }

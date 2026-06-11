@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../api/supabase'
 import toast from 'react-hot-toast'
-import { ShoppingCart, X, Plus, Power } from 'lucide-react'
+import { ShoppingCart, X, Plus, Power, Image as ImageIcon } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { formatCurrency } from '../utils/currency'
+import imageCompression from 'browser-image-compression'
 
 interface Product {
   id: string
@@ -30,6 +31,9 @@ export default function ProductsPage() {
     description: '',
     price: '',
   })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const { isAdmin } = useAuthStore()
 
   useEffect(() => {
@@ -159,6 +163,57 @@ export default function ProductsPage() {
     }
   }
 
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+
+      // Compress image
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 800,
+        useWebWorker: true,
+        initialQuality: 0.8,
+      }
+
+      const compressedFile = await imageCompression(file, options)
+      setImageFile(compressedFile)
+    } catch (error) {
+      toast.error('Error al procesar la imagen')
+      console.error(error)
+    }
+  }
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('products')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath)
+
+      return data.publicUrl
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      return null
+    }
+  }
+
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -168,10 +223,25 @@ export default function ProductsPage() {
     }
 
     try {
+      let imageUrl: string | null = null
+
+      // Upload image if selected
+      if (imageFile) {
+        setUploadingImage(true)
+        imageUrl = await uploadImage(imageFile)
+        setUploadingImage(false)
+
+        if (!imageUrl) {
+          toast.error('Error al subir la imagen')
+          return
+        }
+      }
+
       const { error } = await supabase.from('products').insert({
         name: newProduct.name,
         description: newProduct.description || null,
         price: Number(newProduct.price),
+        image_url: imageUrl,
         is_active: true,
       })
 
@@ -179,10 +249,13 @@ export default function ProductsPage() {
 
       toast.success('Producto creado exitosamente')
       setNewProduct({ name: '', description: '', price: '' })
+      setImageFile(null)
+      setImagePreview(null)
       setShowCreateModal(false)
       fetchProducts()
     } catch (error: any) {
       toast.error('Error al crear producto: ' + error.message)
+      setUploadingImage(false)
     }
   }
 
@@ -254,47 +327,59 @@ export default function ProductsPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {products.map((product) => (
             <div
               key={product.id}
-              className={`bg-slate-800 rounded-xl p-4 border transition-colors ${
+              className={`bg-slate-800 rounded-xl overflow-hidden border transition-colors ${
                 product.is_active ? 'border-slate-700 hover:border-slate-600' : 'border-slate-800 opacity-60'
               }`}
             >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-semibold text-white">{product.name}</h3>
-                {isAdmin() && (
-                  <button
-                    onClick={() => toggleProductActive(product.id, product.is_active)}
-                    className={`p-1 rounded transition-colors ${
-                      product.is_active
-                        ? 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30'
-                        : 'bg-red-600/20 text-red-400 hover:bg-red-600/30'
-                    }`}
-                  >
-                    <Power className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              {product.description && (
-                <p className="text-slate-400 text-sm mb-3">{product.description}</p>
+              {product.image_url && (
+                <div className="w-full h-40 bg-slate-700 flex items-center justify-center p-2">
+                  <img
+                    src={product.image_url}
+                    alt={product.name}
+                    className="w-full h-full object-contain"
+                    loading="lazy"
+                  />
+                </div>
               )}
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-2xl font-bold text-emerald-400">
-                  {formatCurrency(product.price)}
-                </span>
-                <span className={`text-sm ${product.is_active ? 'text-slate-400' : 'text-red-400'}`}>
-                  {product.is_active ? 'Disponible' : 'Agotado'}
-                </span>
+              <div className="p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-lg font-semibold text-white">{product.name}</h3>
+                  {isAdmin() && (
+                    <button
+                      onClick={() => toggleProductActive(product.id, product.is_active)}
+                      className={`p-1 rounded transition-colors ${
+                        product.is_active
+                          ? 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30'
+                          : 'bg-red-600/20 text-red-400 hover:bg-red-600/30'
+                      }`}
+                    >
+                      <Power className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                {product.description && (
+                  <p className="text-slate-400 text-sm mb-3 line-clamp-2">{product.description}</p>
+                )}
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-2xl font-bold text-emerald-400">
+                    {formatCurrency(product.price)}
+                  </span>
+                  <span className={`text-sm ${product.is_active ? 'text-slate-400' : 'text-red-400'}`}>
+                    {product.is_active ? 'Disponible' : 'Agotado'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => addToCart(product)}
+                  disabled={!product.is_active}
+                  className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                >
+                  {product.is_active ? 'Agregar' : 'Agotado'}
+                </button>
               </div>
-              <button
-                onClick={() => addToCart(product)}
-                disabled={!product.is_active}
-                className="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-              >
-                {product.is_active ? 'Agregar' : 'Agotado'}
-              </button>
             </div>
           ))}
         </div>
@@ -401,7 +486,7 @@ export default function ProductsPage() {
                   value={newProduct.name}
                   onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
                   required
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
@@ -411,9 +496,62 @@ export default function ProductsPage() {
                 <textarea
                   value={newProduct.description}
                   onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                  rows={3}
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  rows={2}
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Imagen del Producto
+                </label>
+                <div className="space-y-3">
+                  {imagePreview ? (
+                    <div className="relative">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-48 object-cover rounded-lg border border-slate-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImageFile(null)
+                          setImagePreview(null)
+                        }}
+                        className="absolute top-2 right-2 p-2 bg-red-600 hover:bg-red-700 text-white rounded-full"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-slate-600 rounded-lg p-6 text-center hover:border-slate-500 transition-colors">
+                      <input
+                        type="file"
+                        id="product-image"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="product-image"
+                        className="cursor-pointer flex flex-col items-center gap-2"
+                      >
+                        <ImageIcon className="w-8 h-8 text-slate-400" />
+                        <span className="text-slate-400 text-sm">
+                          Click para subir imagen
+                        </span>
+                        <span className="text-slate-500 text-xs">
+                          JPG, PNG, WebP (máx 1MB)
+                        </span>
+                      </label>
+                    </div>
+                  )}
+                  {uploadingImage && (
+                    <div className="text-center text-slate-400 text-sm">
+                      Subiendo imagen...
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -430,7 +568,7 @@ export default function ProductsPage() {
                   min="0"
                   step="0.01"
                   placeholder="0"
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div className="flex gap-3">

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { motion } from 'motion/react'
-import { LogIn, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { LogIn, Mail, Lock, Eye, EyeOff, Candy } from 'lucide-react'
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true)
@@ -37,9 +37,9 @@ export default function LoginPage() {
         className="absolute inset-0 opacity-30"
         animate={{
           background: [
-            'radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.3) 0%, transparent 50%)',
-            'radial-gradient(circle at 80% 70%, rgba(99, 102, 241, 0.3) 0%, transparent 50%)',
-            'radial-gradient(circle at 40% 60%, rgba(139, 92, 246, 0.3) 0%, transparent 50%)',
+            'radial-gradient(circle at 20% 30%, rgba(16, 185, 129, 0.3) 0%, transparent 50%)',
+            'radial-gradient(circle at 80% 70%, rgba(34, 197, 94, 0.3) 0%, transparent 50%)',
+            'radial-gradient(circle at 40% 60%, rgba(52, 211, 153, 0.3) 0%, transparent 50%)',
           ],
         }}
         transition={{ duration: 8, repeat: Infinity, repeatType: 'reverse' }}
@@ -59,11 +59,11 @@ export default function LoginPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-              className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30"
+              className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/30"
             >
-              <LogIn className="w-8 h-8 text-white" />
+              <Candy className="w-8 h-8 text-white" />
             </motion.div>
-            <h2 className="text-center text-xl font-semibold text-blue-400 mb-2">Nexo</h2>
+            <h2 className="text-center text-xl font-semibold text-emerald-400 mb-2">Picadeli</h2>
             <h1 className="text-center text-3xl font-semibold text-white mb-2">
               {isLogin ? 'Bienvenido' : 'Crear Cuenta'}
             </h1>
@@ -98,7 +98,7 @@ export default function LoginPage() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                     placeholder="Tu nombre"
                     required
                   />
@@ -117,7 +117,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   placeholder="tu@email.com"
                   required
                 />
@@ -149,24 +149,13 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Remember & Forgot */}
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center text-slate-400 cursor-pointer hover:text-slate-300 transition-colors">
-                <input type="checkbox" className="mr-2 rounded border-slate-600 bg-slate-800" />
-                Recordarme
-              </label>
-              <button type="button" className="text-blue-400 hover:text-blue-300 transition-colors">
-                ¿Olvidaste tu contraseña?
-              </button>
-            </div>
-
             {/* Submit Button */}
             <motion.button
               type="submit"
               disabled={loading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -194,7 +183,7 @@ export default function LoginPage() {
                   setIsLogin(!isLogin)
                   clearError()
                 }}
-                className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
               >
                 {isLogin ? 'Regístrate aquí' : 'Inicia sesión'}
               </button>

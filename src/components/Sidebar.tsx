@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { LayoutDashboard, ShoppingCart, Users, Settings, LogOut, X, Candy } from 'lucide-react'
+import { LayoutDashboard, ShoppingCart, Users, Settings, X, Candy } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
@@ -9,7 +9,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onOpenChange }: SidebarProps) {
-  const { signOut, profile, isAdmin } = useAuthStore()
+  const { isAdmin } = useAuthStore()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -20,16 +20,6 @@ export function Sidebar({ isOpen, onOpenChange }: SidebarProps) {
     ...(isAdmin() ? [{ id: 'users', label: 'Usuarios', icon: Users, path: '/users' }] : []),
     ...(isAdmin() ? [{ id: 'settings', label: 'Configuración', icon: Settings, path: '/settings' }] : []),
   ]
-
-  const handleLogout = async () => {
-    await signOut()
-    window.location.href = '/login'
-  }
-
-  const getUserInitials = () => {
-    if (!profile?.full_name) return profile?.email?.[0]?.toUpperCase() || 'U'
-    return profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
-  }
 
   const isActive = (path: string) => location.pathname === path
 
@@ -79,24 +69,6 @@ export function Sidebar({ isOpen, onOpenChange }: SidebarProps) {
             )
           })}
         </nav>
-
-        {/* User Section */}
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold">{getUserInitials()}</span>
-              </div>
-              <div>
-                <p className="text-white text-sm font-medium">{profile?.full_name || 'Usuario'}</p>
-                <p className="text-slate-400 text-xs">{profile?.email || ''}</p>
-              </div>
-            </div>
-            <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors">
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Mobile Sidebar */}
@@ -150,24 +122,6 @@ export function Sidebar({ isOpen, onOpenChange }: SidebarProps) {
             )
           })}
         </nav>
-
-        {/* User Section */}
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold">{getUserInitials()}</span>
-              </div>
-              <div>
-                <p className="text-white text-sm font-medium">{profile?.full_name || 'Usuario'}</p>
-                <p className="text-slate-400 text-xs">{profile?.email || ''}</p>
-              </div>
-            </div>
-            <button onClick={handleLogout} className="text-slate-400 hover:text-white transition-colors">
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
       </motion.div>
     </>
   )
