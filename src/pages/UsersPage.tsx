@@ -51,7 +51,7 @@ export default function UsersPage() {
 
     try {
       // Call Edge Function to create user without affecting current session
-      const { data, error } = await supabase.functions.invoke('create-user', {
+      const { error } = await supabase.functions.invoke('create-user', {
         body: {
           email: newUserEmail,
           password: newUserPassword,
